@@ -1,24 +1,28 @@
 name: Terraform AWS Workflow
 
 on:
-  workflow_dispatch:
-    # Inputs the workflow accepts.
-    inputs:
-      tfpath:
-        description: 'TF File Path'     
-        required: false
-        default: 'create_ec2'
-  push:
-    branches: [ main ]
+#   workflow_dispatch:
+#     # Inputs the workflow accepts.
+#     inputs:
+#       tfpath:
+#         description: 'TF File Path'     
+#         required: false
+#         default: 'create_ec2'
+#   push:
+#     branches: [ main ]
+#   pull_request:
+#     branches: [ main ]
   pull_request:
-    branches: [ main ]
+    types:
+      - opened
+      - synchronize
 
 jobs:
   tf_code_check:
     name: Terraform Validation and Build
     runs-on: ubuntu-latest
 
-    if:  ${{ inputs.tfpath }} 
+#     if:  ${{ inputs.tfpath }} 
     steps:
     - name: Checkout tf code in runner environment
       uses: actions/checkout@v3.5.2
@@ -32,30 +36,69 @@ jobs:
 
     - name: Setup Terraform CLI
       uses: hashicorp/setup-terraform@v2.0.2
+      with:
+        terraform_version: 2.0.2
+        
+    - name: Terraform Validate
+      run: terraform validate
       
     - name: Terraform init and validate
-      run: |
-        echo `pwd`
-        echo "tfpath ${{ github.event.inputs.tfpath }}"
-        echo "Running Terraform Init"
-        terraform init
-        echo "Running Terraform Validate"
-        terraform validate
-      working-directory: ${{ github.event.inputs.tfpath }}
+      run: terraform init
+#       run: |
+#         echo `pwd`
+#         echo "tfpath ${{ github.event.inputs.tfpath }}"
+#         echo "Running Terraform Init"
+#         terraform init
+#         echo "Running Terraform Validate"
+#         terraform validate
+#       working-directory: ${{ github.event.inputs.tfpath }}
 
-    - name: Terraform Plan and apply
+    - name: Terraform Plan
+      run: terraform plan -out=tfplan
+      
+    - name: Comment Approval Request
+      uses: repo-sync/github-comment@v2
+      with:
+        issue-number: ${{ github.event.pull_request.number }}
+        message: |
+          Please review and approve this pull request for infrastructure deployment.
+          
+    - name: Wait for Approval
+      id: approval
+      uses: repo-sync/approval@v2
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        issue-number: ${{ github.event.pull_request.number }}
+        comment: >
+          Please approve this pull request for infrastructure deployment.
+    
+    - name: Merge Pull Request
+      if: ${{ steps.approval.outputs.approved == 'true' }}
       run: |
-        echo `pwd`
-        echo "tfpath ${{ github.event.inputs.tfpath }}"        
-        echo "** Running Terraform Plan**"
-        terraform plan
+        git config user.name github-actions
+        git config user.email mailto:github-actions@github.com
+        git fetch origin pull/${{ github.event.pull_request.number }}/merge --depth=1
+        git merge FETCH_HEAD --no-edit
+        git push origin HEAD
+
+    - name: Apply Terraform Changes
+      if: ${{ steps.approval.outputs.approved == 'true' }}
+      run: terraform apply -auto-approve tfplan
+
+
+#     - name: Terraform Plan and apply
+#       run: |
+#         echo `pwd`
+#         echo "tfpath ${{ github.event.inputs.tfpath }}"        
+#         echo "** Running Terraform Plan**"
+#         terraform plan
         
-        echo "** Running Terraform Apply**"
-        terraform apply -auto-approve
-      working-directory: ${{ github.event.inputs.tfpath }}
+#         echo "** Running Terraform Apply**"
+#         terraform apply -auto-approve
+#       working-directory: ${{ github.event.inputs.tfpath }}
 
-    - name: Terraform Destroy
-      run: |
-        echo "** Running Terraform Destroy**"
-        terraform destroy -auto-approve
-      working-directory: ${{ github.event.inputs.tfpath }}
+#     - name: Terraform Destroy
+#       run: |
+#         echo "** Running Terraform Destroy**"
+#         terraform destroy -auto-approve
+#       working-directory: ${{ github.event.inputs.tfpath }}
