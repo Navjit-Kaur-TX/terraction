@@ -32,17 +32,17 @@ jobs:
 
     - name: Setup Terraform CLI
       uses: hashicorp/setup-terraform@v2.0.2
-
-    - name: Terraform init and validate
+      
+    - name: Terraform init
       run: |
-        echo `pwd`
-        echo "tfpath ${{ github.event.inputs.tfpath }}"
-        echo "** Running Terraform Init**"
+        echo "RUNNING TERRAFORM INIT"
         terraform init
-        
-        echo "** Running Terraform Validate**"
+      
+    - name: Terraform Validate
+      run: |
+        echo "RUNNING TERRAFORM VALIDATE"
         terraform validate
-      working-directory: ${{ github.event.inputs.tfpath }}
+
     - name: Terraform plan and apply
       run: |
         echo `pwd`
