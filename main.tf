@@ -13,9 +13,7 @@ variable "instance_count" {
   default = 1
 }
 
-# Terraform Required provider Block
 # In this section, we need to declare the providers and their version constraint used to create the infrastructure
-# It is needed to avoid any version mismatch of the provider 
 # Also it is good to mention what is the required version of Terraform CLI needed for the infra creation
 terraform {
   required_providers {
