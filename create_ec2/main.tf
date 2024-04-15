@@ -56,6 +56,12 @@ resource "aws_instance" "app_server" {
   }
 }
 
+terraform {  
+backend "s3" {  
+      
+  }  
+}
+
 # Output Block
 # Here we can print the values of Infra resources that is supported
 # For ex: We are printing instance_id and instance_state
