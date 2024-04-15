@@ -57,8 +57,8 @@ resource "aws_instance" "app_server" {
 }
 
 terraform {  
-backend "s3" {  
-      
+  backend "s3" {
+
   }  
 }
 
